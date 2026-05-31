@@ -1,3 +1,5 @@
+"use client";
+
 import {
   ActionBarPrimitive,
   BranchPickerPrimitive,
@@ -6,9 +8,10 @@ import {
   ThreadPrimitive,
 } from "@assistant-ui/react";
 import type { FC } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   ArrowDownIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon,
-  CopyIcon, PencilIcon, RefreshCwIcon, SendHorizontalIcon,
+  CopyIcon, PencilIcon, RefreshCwIcon, SendHorizontalIcon, MicIcon, MicOffIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -46,7 +49,6 @@ const ThreadWelcome: FC = () => (
   <ThreadPrimitive.Empty>
     <div className="flex w-full max-w-[var(--thread-max-width)] flex-grow flex-col">
       <div className="flex w-full flex-grow flex-col items-center justify-center gap-4">
-        {/* Kroxy logo mark */}
         <svg width="60" height="60" viewBox="0 0 48 48" fill="none">
           <circle cx="24" cy="24" r="24" fill="url(#twg)"/>
           <path d="M14 24C14 18 19 14 24 14C29 14 34 18 34 24C34 30 29 34 24 34" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
@@ -76,7 +78,7 @@ const ThreadWelcome: FC = () => (
 const ThreadWelcomeSuggestions: FC = () => (
   <div className="mt-4 flex w-full flex-wrap items-stretch justify-center gap-3 pb-2">
     {[
-      { prompt: "Search the web: what's trending on YouTube right now?", label: "🔍 What's trending on YouTube?" },
+      { prompt: "What's trending on YouTube right now?", label: "🔍 What's trending on YouTube?" },
       { prompt: "Help me create an epic Minecraft YouTube thumbnail concept with dramatic lighting and bold text", label: "⛏️ Minecraft thumbnail idea" },
       { prompt: "Write me a Python Discord bot with /ping and /hello slash commands", label: "🐍 Python Discord bot" },
       { prompt: "Design a Roblox gaming channel banner and icon concept — dark theme, neon colours", label: "🎮 Roblox channel art" },
@@ -94,17 +96,106 @@ const ThreadWelcomeSuggestions: FC = () => (
   </div>
 );
 
-const Composer: FC = () => (
-  <ComposerPrimitive.Root className="focus-within:border-primary/40 flex w-full flex-wrap items-end rounded-xl border bg-inherit px-2.5 shadow-sm transition-colors ease-in">
-    <ComposerPrimitive.Input
-      rows={1}
-      autoFocus
-      placeholder="Message Kroxy..."
-      className="placeholder:text-muted-foreground max-h-40 flex-grow resize-none border-none bg-transparent px-2 py-4 text-sm outline-none focus:ring-0 disabled:cursor-not-allowed"
-    />
-    <ComposerAction />
-  </ComposerPrimitive.Root>
-);
+// ── Composer with mic button ──
+const Composer: FC = () => {
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
+  // We need to inject text into the ComposerPrimitive.Input.
+  // We do this by finding the textarea and dispatching a native input event.
+  const injectText = useCallback((text: string) => {
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      "[data-testid='composer-input'], .aui-composer-input, textarea[placeholder='Message Kroxy...']"
+    );
+    if (!textarea) return;
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+    nativeInputValueSetter?.call(textarea, text);
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+    textarea.focus();
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setIsTranscribing(true);
+        try {
+          const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+          const formData = new FormData();
+          formData.append("audio", audioBlob, "recording.webm");
+
+          const res = await fetch("/api/transcribe", { method: "POST", body: formData });
+          const data = await res.json();
+
+          if (data.text) {
+            injectText(data.text);
+          } else {
+            console.error("Transcription error:", data.error);
+          }
+        } catch (err) {
+          console.error("Transcription failed:", err);
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Mic access denied:", err);
+      alert("Microphone access denied. Please allow mic permissions and try again.");
+    }
+  }, [injectText]);
+
+  const stopRecording = useCallback(() => {
+    mediaRecorderRef.current?.stop();
+    setIsRecording(false);
+  }, []);
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) stopRecording();
+    else startRecording();
+  }, [isRecording, startRecording, stopRecording]);
+
+  return (
+    <ComposerPrimitive.Root className="focus-within:border-primary/40 flex w-full flex-wrap items-end rounded-xl border bg-inherit px-2.5 shadow-sm transition-colors ease-in">
+      <ComposerPrimitive.Input
+        rows={1}
+        autoFocus
+        placeholder="Message Kroxy..."
+        className="placeholder:text-muted-foreground max-h-40 flex-grow resize-none border-none bg-transparent px-2 py-4 text-sm outline-none focus:ring-0 disabled:cursor-not-allowed"
+      />
+
+      {/* Mic button — Groq Whisper STT */}
+      <TooltipIconButton
+        tooltip={isRecording ? "Stop recording" : isTranscribing ? "Transcribing..." : "Voice input (Groq Whisper)"}
+        variant="ghost"
+        className={cn(
+          "my-2.5 size-8 p-2 transition-all ease-in",
+          isRecording && "text-red-500 animate-pulse",
+          isTranscribing && "text-primary opacity-60 cursor-not-allowed"
+        )}
+        onClick={toggleRecording}
+        disabled={isTranscribing}
+      >
+        {isRecording ? <MicOffIcon /> : <MicIcon />}
+      </TooltipIconButton>
+
+      <ComposerAction />
+    </ComposerPrimitive.Root>
+  );
+};
 
 const ComposerAction: FC = () => (
   <>
@@ -155,7 +246,6 @@ const EditComposer: FC = () => (
 
 const AssistantMessage: FC = () => (
   <MessagePrimitive.Root className="grid grid-cols-[auto_auto_1fr] grid-rows-[auto_1fr] relative w-full max-w-[var(--thread-max-width)] py-4">
-    {/* Kroxy avatar */}
     <div className="col-start-1 row-start-1 mr-3 mt-1 flex-shrink-0">
       <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
         <circle cx="24" cy="24" r="24" fill="url(#amg)"/>
