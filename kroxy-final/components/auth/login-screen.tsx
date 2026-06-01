@@ -93,7 +93,7 @@ export function LoginScreen({ onLogin, onGoRegister }: Props) {
         </div>
 
         <p className="text-center text-sm" style={{ color: "rgba(255,255,255,.4)" }}>
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <button onClick={onGoRegister} className="font-semibold transition-colors" style={{ color: "#c4b5fd" }}>
             Create one
           </button>
