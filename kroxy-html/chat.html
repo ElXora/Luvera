@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Kroxy AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="chat.css"/>
+</head>
+<body>
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo">
+      <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="24" fill="url(#sbLg)"/>
+        <path d="M14 24C14 18 19 14 24 14C29 14 34 18 34 24C34 30 29 34 24 34" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <circle cx="24" cy="24" r="4" fill="white"/>
+        <defs><linearGradient id="sbLg" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#5B21B6"/></linearGradient></defs>
+      </svg>
+      <span>Kroxy</span>
+    </div>
+    <button class="sb-hide-btn" id="sbHideBtn" onclick="toggleSidebar()" title="Hide sidebar">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 19l-7-7 7-7"/><path d="M19 5v14"/></svg>
+    </button>
+  </div>
+
+  <button class="new-chat-btn" onclick="newChat()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    New Chat
+  </button>
+
+  <div class="sb-section-label">Chats</div>
+  <div class="sb-threads" id="sbThreads">
+    <div class="sb-empty">No chats yet. Start one!</div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-user" id="sbUser">
+      <div class="sb-avatar" id="sbAvatar">K</div>
+      <div class="sb-user-info">
+        <div class="sb-user-name" id="sbName">User</div>
+        <div class="sb-user-email" id="sbEmail">user@email.com</div>
+      </div>
+      <button class="sb-logout-btn" onclick="logout()" title="Sign out">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Sidebar open button (shown when collapsed) -->
+<button class="sb-open-btn hidden" id="sbOpenBtn" onclick="toggleSidebar()">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h14M13 5l7 7-7 7"/></svg>
+</button>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main" id="main">
+
+  <!-- Chat topbar -->
+  <div class="topbar">
+    <div class="topbar-logo">
+      <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="24" fill="url(#tbLg)"/>
+        <path d="M14 24C14 18 19 14 24 14C29 14 34 18 34 24C34 30 29 34 24 34" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <circle cx="24" cy="24" r="4" fill="white"/>
+        <defs><linearGradient id="tbLg" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#5B21B6"/></linearGradient></defs>
+      </svg>
+      Kroxy
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="messages" id="messages">
+    <!-- Welcome screen -->
+    <div class="welcome" id="welcome">
+      <svg width="60" height="60" viewBox="0 0 48 48" fill="none">
+        <circle cx="24" cy="24" r="24" fill="url(#wcLg)"/>
+        <path d="M14 24C14 18 19 14 24 14C29 14 34 18 34 24C34 30 29 34 24 34" stroke="white" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <circle cx="24" cy="24" r="4" fill="white"/>
+        <path d="M24 30L20 37M24 30L28 37" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+        <defs><linearGradient id="wcLg" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stop-color="#8B5CF6"/><stop offset="100%" stop-color="#5B21B6"/></linearGradient></defs>
+      </svg>
+      <h2>Hi, I&apos;m <span class="purple">Kroxy</span> 👋</h2>
+      <p>Ask me anything — I search the web 🔍, write code 💻, design thumbnails 🎬</p>
+      <div class="chips">
+        <button class="chip" onclick="quickSend('What&apos;s trending on YouTube right now?')">🔍 What&apos;s trending on YouTube?</button>
+        <button class="chip" onclick="quickSend('Help me create an epic Minecraft thumbnail')">⛏️ Minecraft thumbnail</button>
+        <button class="chip" onclick="quickSend('Write me a Python Discord bot with slash commands')">🐍 Python Discord bot</button>
+        <button class="chip" onclick="quickSend('Design a Roblox channel banner — dark neon theme')">🎮 Roblox channel art</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input area -->
+  <div class="input-zone">
+    <div class="input-box" id="inputBox">
+      <div class="attach-row" id="attachRow"></div>
+      <div class="input-inner">
+        <label class="attach-btn" title="Attach file">
+          <input type="file" id="fileInput" multiple accept="image/*,.pdf,.txt,.js,.py,.html,.css,.json" style="display:none" onchange="handleFiles(this)"/>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        </label>
+        <textarea id="chatInput" placeholder="Message Kroxy..." rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="mic-btn" id="micBtn" onclick="toggleVoice()" title="Voice input">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+        </button>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+      <p class="input-caption">Kroxy can make mistakes. Double-check important info.</p>
+    </div>
+  </div>
+</main>
+
+<!-- Voice modal -->
+<div class="voice-modal hidden" id="voiceModal">
+  <div class="voice-card">
+    <div class="voice-rings">
+      <div class="vr vr1"></div><div class="vr vr2"></div><div class="vr vr3"></div>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+    </div>
+    <p class="voice-status" id="voiceStatus">Listening...</p>
+    <p class="voice-transcript" id="voiceTranscript"></p>
+    <button class="voice-stop-btn" onclick="stopVoice()">Stop</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="chat.js"></script>
+</body>
+</html>
